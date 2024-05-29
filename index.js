@@ -2,11 +2,13 @@ import * as THREE from "three";
 import { OrbitControls } from 'jsm/controls/OrbitControls.js';
 import { ImprovedNoise } from 'jsm/math/ImprovedNoise.js';
 import { isOutOfBounds, areOverlapping, getSunlight, getSSSMaterial } from './lib.js';
+
 const w = window.innerWidth;
 const h = window.innerHeight;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
 camera.position.z = 25;
+
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.shadowMap.enabled = true;
 renderer.setSize(w, h);
@@ -16,9 +18,10 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.03;
 
-const startHue = 0.1; // Math.random();
-const endHue = -0.2; // Math.random();
+const startHue = 0.1;
+const endHue = -0.2;
 console.log(startHue, endHue);
+
 function getBox({ col, row, size, numCols, numRows }) {
   const spacing = 1;
   const startPos = {
@@ -39,7 +42,6 @@ function getBox({ col, row, size, numCols, numRows }) {
   const hue = THREE.MathUtils.lerp(startHue, endHue, col / numCols);
   const color = new THREE.Color().setHSL(hue, 1.0, 0.5);
   const mat = getSSSMaterial(color);
-  // const mat = new THREE.MeshStandardMaterial({ color });
   const boxMesh = new THREE.Mesh(geo, mat);
   boxMesh.castShadow = true;
   boxMesh.receiveShadow = true;
@@ -75,6 +77,7 @@ function getBox({ col, row, size, numCols, numRows }) {
 }
 
 const noise = new ImprovedNoise();
+
 function createComposition() {
   const arr = [];
   const group = new THREE.Group();
@@ -112,6 +115,7 @@ function createComposition() {
       }
     }
   }
+
   for (let i = 0, len = numCols * numRows; i < len; i += 1) {
     let col = Math.floor(Math.random() * numCols);
     let row = Math.floor(Math.random() * numRows);
@@ -119,18 +123,19 @@ function createComposition() {
     const size = Math.floor(Math.abs(ns) * maxSize) + 1;
     placeBox({ col, row, size });
   }
-  // fill in little gaps
+
   for (let i = 0, len = numCols * numRows; i < len; i += 1) {
     let col = i % numCols;
     let row = Math.floor(i / numCols);
     placeBox({ col, row, size: 1 });
   }
+
   return group;
 }
+
 const boxes = createComposition();
 scene.add(boxes);
 
-// lights
 const sunlight = getSunlight();
 scene.add(sunlight);
 
@@ -138,28 +143,23 @@ const rightLight = new THREE.SpotLight(0x9900ff, 2000.0);
 rightLight.position.set(38, 0, 0);
 rightLight.target.position.set(0, 0, -10);
 scene.add(rightLight);
-const helper = new THREE.SpotLightHelper(rightLight);
-// scene.add(helper);
 
 const leftLight = new THREE.SpotLight(0xffaa00, 2000.0);
 leftLight.position.set(-38, 0, 0);
 leftLight.target.position.set(0, 0, -10);
 scene.add(leftLight);
-const helperL = new THREE.SpotLightHelper(leftLight);
-// scene.add(helperL);
 
-// Mouse Interactivity
 const raycaster = new THREE.Raycaster();
 const pointerPos = new THREE.Vector2(0, 0);
 const mousePos = new THREE.Vector3(0, 0, 0);
 
-const mousePlaneGeo = new THREE.PlaneGeometry(48, 48, 48, 48);
-const mousePlaneMat = new THREE.MeshBasicMaterial({
+const mouseSphereGeo = new THREE.SphereGeometry(24, 32, 32);
+const mouseSphereMat = new THREE.MeshBasicMaterial({
   transparent: true,
   opacity: 0.0
 });
-const mousePlane = new THREE.Mesh(mousePlaneGeo, mousePlaneMat);
-scene.add(mousePlane);
+const mouseSphere = new THREE.Mesh(mouseSphereGeo, mouseSphereMat);
+scene.add(mouseSphere);
 
 window.addEventListener('mousemove', (evt) => {
   pointerPos.set(
@@ -170,10 +170,7 @@ window.addEventListener('mousemove', (evt) => {
 
 function handleRaycast() {
   raycaster.setFromCamera(pointerPos, camera);
-  const intersects = raycaster.intersectObjects(
-    [mousePlane],
-    false
-  );
+  const intersects = raycaster.intersectObject(mouseSphere, false);
   if (intersects.length > 0) {
     mousePos.copy(intersects[0].point);
   }
@@ -188,7 +185,7 @@ function animate() {
 }
 animate();
 
-function handleWindowResize () {
+function handleWindowResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
